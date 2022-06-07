@@ -1,0 +1,37 @@
+
+additionalPrometheusRulesMap:
+  monitoring-config:
+    groups:
+    - name: monitoring-pod
+      rules:
+      - alert: NodeMemories
+        annotations:
+          description: '{{ $value | humanizePercentage }} of Alertmanager instances
+            within the {{$labels.job}} cluster have restarted at least 5 times in the
+            last 10m.'
+          summary: Half or more of the Alertmanager instances within the same cluster
+            are crashlooping.
+        expr: (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes) * 100 < 15
+        for: 5s
+        labels:
+          severity: critical
+
+      - alert: NodeDisks
+        expr: (node_filesystem_avail_bytes * 100) / node_filesystem_size_bytes < 15 and ON (instance, device, mountpoint) node_filesystem_readonly == 0
+        for: 5m
+        labels:
+        severity: critical
+        annotations:
+          summary: Host out of disk space (instance {{ $labels.instance }})
+          description: "Disk is almost full (< 10% left)\n  VALUE = {{ $value }}\n  LABELS = {{ $labels }}"
+
+      - alert: NodeCpu
+        expr: 100 - (avg by(instance) (rate(node_cpu_seconds_total{mode="idle"}[2m])) * 100) > 85
+        for: 5m
+        labels:
+        severity: critical
+        annotations:
+          summary: Host high CPU load (instance {{ $labels.instance }})
+          description: "CPU load is > 85%\n  VALUE = {{ $value }}\n  LABELS = {{ $labels }}"
+
+
